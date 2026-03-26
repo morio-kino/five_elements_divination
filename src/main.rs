@@ -22,7 +22,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "eframe template",
+        "五行易",
         native_options,
         Box::new(|cc| Ok(Box::new(five_elements_divination::TemplateApp::new(cc)))),
     )
