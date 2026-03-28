@@ -1,6 +1,6 @@
 //! アプリのメインファイル
 //! ネイティブとwasmで別のmain関数を定義している。
-//! 実際の処理は作成した`TemplateApp`のオブジェクトで行う。
+//! 実際の処理は作成した`DivinationApp`のオブジェクトで行う。
 
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
@@ -24,7 +24,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "五行易",
         native_options,
-        Box::new(|cc| Ok(Box::new(five_elements_divination::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(five_elements_divination::DivinationApp::new(cc)))),
     )
 }
 
@@ -54,7 +54,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(five_elements_divination::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(five_elements_divination::DivinationApp::new(cc)))),
             )
             .await;
 

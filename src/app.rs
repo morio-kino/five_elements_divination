@@ -10,35 +10,45 @@ use std::sync::Arc;
 use strum::IntoEnumIterator as _;
 use strum_macros::{Display, EnumIter};
 
+mod gui_tools;
+use gui_tools::GuiTools;
+
 // 機能名の一覧
 #[derive(Debug, EnumIter, FromPrimitive, Display)]
 enum FuncNames {
-    FirstSample,       // 最初のサンプル
+    Application,       // アプリの画面表示
     Button,            // ボタン
     Checbox,           // チェックボックス
-    RadioButton,       // ラジオボタン
-    Selectables,       // 選択ラベル、選択値
-    TextInput,         // テキスト入力
-    Texts,             // テキスト表示
-    Slider,            // スライダー
-    DragValue,         // 数値入力
-    ProgressBar,       // プログレスバー
-    MenuButton,        // メニューバー
+    Collapse,          // 折りたたみ
+    Colmuns,           // 列分割
     Combobox,          // コンボボックス
-    Spinner,           // スピナー
-    Image,             // 画像
-    Hyperlink,         // ハイパーリンク
-    Link,              // リンク
+    DragValue,         // 数値入力
+    FirstSample,       // 最初のサンプル
     Frames,            // フレーム
-    Panels,            //クライアント領域のパネル分割
+    Grid,              // グリッド
     HorVer,            // 水平・垂直配置
     HorWrapping,       // 水平ラッピング
-    Colmuns,           // 列分割
-    Grid,              // グリッド
+    Hyperlink,         // ハイパーリンク
+    Image,             // 画像
     Layout,            // レイアウト（左寄せ、右寄せ、中央寄せ）
+    Link,              // リンク
+    MenuButton,        // メニューバー
+    Panels,            //クライアント領域のパネル分割
+    ProgressBar,       // プログレスバー
+    RadioButton,       // ラジオボタン
     Scroll,            // スクロール
+    Selectables,       // 選択ラベル、選択値
+    Slider,            // スライダー
     SpaceAndSeparator, //余白・区切り・インデント
-    Collapse,          // 折りたたみ
+    Spinner,           // スピナー
+    TextInput,         // テキスト入力
+    Texts,             // テキスト表示
+}
+
+enum VisualMode {
+    Dark,
+    Light,
+    System,
 }
 
 pub struct WinSize {
@@ -83,7 +93,12 @@ fn change_canvas_size(_ctx: &egui::Context, x: f32, y: f32) {
 /////////////////////////////////////
 /// アプリのstruct
 //#[derive(Default)]
-pub struct TemplateApp {
+pub struct DivinationApp {
+    visual_mode: VisualMode,
+    yyyy_mm_dd: String,
+    hh_mm_ss: String,
+    etoreki: String,
+
     func_selection: usize,
     counter: i32,
     is_win_large: bool,
@@ -107,9 +122,14 @@ pub struct TemplateApp {
 }
 
 // アプリの初期値
-impl Default for TemplateApp {
+impl Default for DivinationApp {
     fn default() -> Self {
         Self {
+            visual_mode: VisualMode::Light,
+            yyyy_mm_dd: String::new(),
+            hh_mm_ss: String::new(),
+            etoreki: String::new(),
+
             func_selection: 0,
             counter: 0,
             is_win_large: false,
@@ -135,21 +155,34 @@ impl Default for TemplateApp {
 }
 
 // アプリの表示のコントロール
-impl eframe::App for TemplateApp {
+impl eframe::App for DivinationApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // クライアント領域の背景色
-        /*
-        if dark {
-            let mut visuals = egui::Visuals::dark();
-            visuals.panel_fill = egui::Color32::from_rgb(30, 30, 30);
-            //visuals.panel_fill = egui::Color32::from_rgb(255, 255, 255);
-        } else {
-            let visuals = egui::Visuals::light();
-            //let visuals = egui::Visuals::dark();
-            ctx.set_visuals(visuals);
+        // 表示モードの設定
+        match self.visual_mode {
+            VisualMode::Dark => {
+                // クライアント領域の背景色とテキスト色を設定
+                let mut dark_visuals = egui::Visuals::dark();
+                dark_visuals.panel_fill = egui::Color32::from_rgb(40, 40, 40);
+                dark_visuals.override_text_color =
+                    Option::Some(egui::Color32::from_rgb(255, 255, 255));
+                dark_visuals.text_alpha_from_coverage =
+                    egui::epaint::AlphaFromCoverage::DARK_MODE_DEFAULT;
+                ctx.set_visuals(dark_visuals);
+            }
+            VisualMode::Light => {
+                // クライアント領域の背景色とテキスト色を設定
+                let mut light_visuals = egui::Visuals::light();
+                light_visuals.panel_fill = egui::Color32::from_rgb(243, 243, 243);
+                light_visuals.override_text_color = Option::Some(egui::Color32::from_rgb(0, 0, 0));
+                light_visuals.text_alpha_from_coverage =
+                    egui::epaint::AlphaFromCoverage::Gamma(0.5);
+                ctx.set_visuals(light_visuals);
+            }
+            VisualMode::System => {
+                ctx.set_visuals(egui::Visuals::default());
+            }
         }
-        */
 
         // メニューバーを表示
         self.show_menubar(ctx); // メニューバー表示
@@ -160,32 +193,33 @@ impl eframe::App for TemplateApp {
                 FromPrimitive::from_usize(self.func_selection);
             if let Some(item) = selected_func_item {
                 match item {
-                    FuncNames::FirstSample => self.show_first_sample(ctx, ui), // 最初のサンプル
-                    FuncNames::Button => self.show_button(ctx, ui),            // ボタン
-                    FuncNames::Checbox => self.show_checkbox(ctx, ui),         // チェックボックス
-                    FuncNames::RadioButton => self.show_radio_button(ctx, ui), // ラジオボタン
-                    FuncNames::Selectables => self.show_selectables(ctx, ui),  // 選択ラベル、選択値
-                    FuncNames::TextInput => self.show_text_input(ctx, ui),     // テキスト入力
-                    FuncNames::Texts => self.show_texts(ctx, ui),              // テキスト表示
-                    FuncNames::Slider => self.show_slider(ctx, ui),            // スライダー
-                    FuncNames::DragValue => self.show_drag_value(ctx, ui),     // 数値入力
-                    FuncNames::ProgressBar => self.show_progress_bar(ctx, ui), // プログレスバー
-                    FuncNames::MenuButton => self.show_menu_button(ctx, ui),   // メニューバー
-                    FuncNames::Combobox => self.show_combobox(ctx, ui),        // コンボボックス
-                    FuncNames::Spinner => self.show_spinner(ctx, ui),          // スピナー
-                    FuncNames::Image => self.show_image(ctx, ui),              // 画像
-                    FuncNames::Hyperlink => self.show_hyperlink(ctx, ui),      // ハイパーリンク
-                    FuncNames::Link => self.show_link(ctx, ui),                // リンク
-                    FuncNames::Frames => self.show_frames(ctx, ui),            // フレーム
-                    FuncNames::Panels => self.show_panels(ctx, ui), //クライアント領域のパネル分割
-                    FuncNames::HorVer => self.show_hor_ver(ctx, ui), // 水平・垂直配置
-                    FuncNames::HorWrapping => self.show_hor_wrapping(ctx, ui), // 水平ラッピング
-                    FuncNames::Colmuns => self.show_colmuns(ctx, ui), // 列分割
-                    FuncNames::Grid => self.show_grid(ctx, ui),     // グリッド
-                    FuncNames::Layout => self.show_layout(ctx, ui), // レイアウト（左寄せ、右寄せ、中央寄せ）
-                    FuncNames::Scroll => self.show_scroll(ctx, ui), // スクロール
-                    FuncNames::SpaceAndSeparator => self.show_space_and_separator(ctx, ui), //余白・区切り・インデント
+                    FuncNames::Application => self.show_appli(ctx, ui), // ボタン
+                    FuncNames::Button => self.show_button(ctx, ui),     // ボタン
+                    FuncNames::Checbox => self.show_checkbox(ctx, ui),  // チェックボックス
                     FuncNames::Collapse => self.show_collapse(ctx, ui), // 折りたたみ
+                    FuncNames::Colmuns => self.show_colmuns(ctx, ui),   // 列分割
+                    FuncNames::Combobox => self.show_combobox(ctx, ui), // コンボボックス
+                    FuncNames::DragValue => self.show_drag_value(ctx, ui), // 数値入力
+                    FuncNames::FirstSample => self.show_first_sample(ctx, ui), // 最初のサンプル
+                    FuncNames::Frames => self.show_frames(ctx, ui),     // フレーム
+                    FuncNames::Grid => self.show_grid(ctx, ui),         // グリッド
+                    FuncNames::HorVer => self.show_hor_ver(ctx, ui),    // 水平・垂直配置
+                    FuncNames::HorWrapping => self.show_hor_wrapping(ctx, ui), // 水平ラッピング
+                    FuncNames::Hyperlink => self.show_hyperlink(ctx, ui), // ハイパーリンク
+                    FuncNames::Image => self.show_image(ctx, ui),       // 画像
+                    FuncNames::Layout => self.show_layout(ctx, ui), // レイアウト（左寄せ、右寄せ、中央寄せ）
+                    FuncNames::Link => self.show_link(ctx, ui),     // リンク
+                    FuncNames::MenuButton => self.show_menu_button(ctx, ui), // メニューバー
+                    FuncNames::Panels => self.show_panels(ctx, ui), //クライアント領域のパネル分割
+                    FuncNames::ProgressBar => self.show_progress_bar(ctx, ui), // プログレスバー
+                    FuncNames::RadioButton => self.show_radio_button(ctx, ui), // ラジオボタン
+                    FuncNames::Scroll => self.show_scroll(ctx, ui), // スクロール
+                    FuncNames::Selectables => self.show_selectables(ctx, ui), // 選択ラベル、選択値
+                    FuncNames::Slider => self.show_slider(ctx, ui), // スライダー
+                    FuncNames::SpaceAndSeparator => self.show_space_and_separator(ctx, ui), //余白・区切り・インデント
+                    FuncNames::Spinner => self.show_spinner(ctx, ui), // スピナー
+                    FuncNames::TextInput => self.show_text_input(ctx, ui), // テキスト入力
+                    FuncNames::Texts => self.show_texts(ctx, ui),     // テキスト表示
                 }
             }
         });
@@ -274,7 +308,7 @@ fn setup_fonts(ctx: &egui::Context) {
 
 //////////////////////
 // アプリの実装
-impl TemplateApp {
+impl DivinationApp {
     /// アプリのコンストラクター
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -289,6 +323,63 @@ impl TemplateApp {
 
         // デフォルトのオブジェクトを作成
         Default::default()
+    }
+
+    /// アプリの画面表示
+    fn show_appli(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        ////////////////////////////////////////////////////////////////////////////
+        ui.add_space(10.0);
+
+        GuiTools::show_titled_frame(ctx, ui, "卦", |ui| {
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.label(" ");
+                    let res = ui.checkbox(&mut self.checked, "現在 → ");
+                    if (res).changed() {
+                        println!("チェックボックスの状態が変わりました: {}", self.checked);
+                    }
+                    ui.label("占った日");
+                });
+                ui.vertical(|ui| {
+                    let label_text = "(yyyy/mm/dd)";
+                    ui.label(label_text);
+                    let size = GuiTools::get_display_size(ctx, ui, label_text);
+                    ui.add(egui::TextEdit::singleline(&mut self.yyyy_mm_dd).desired_width(size.x));
+                    ui.label("　");
+                });
+                ui.vertical(|ui| {
+                    let label_text = "(hh:mm:ss)";
+                    ui.label(label_text);
+                    let size = GuiTools::get_display_size(ctx, ui, label_text);
+                    ui.add(egui::TextEdit::singleline(&mut self.hh_mm_ss).desired_width(size.x));
+                    ui.label("　");
+                });
+                ui.vertical(|ui| {
+                    let label_text = "干支歴";
+                    ui.label(label_text);
+                    let size = GuiTools::get_display_size(ctx, ui, "甲子年甲子月甲子日");
+                    ui.add(egui::TextEdit::singleline(&mut self.etoreki).desired_width(size.x));
+                    ui.label("　");
+                });
+                /*
+                ui.vertical(|ui| {
+                    ui.label("(hh:mm:ss)");
+                    ui.text_edit_singleline(&mut self.input_text_single);
+                    ui.label("　");
+                });
+                ui.vertical(|ui| {
+                    ui.label("干支歴");
+                    ui.text_edit_singleline(&mut self.input_text_single);
+                    ui.label("　");
+                });
+                let _btn = ui.button("ボタン1");
+                let _btn = ui.button("ボタン2");
+                let _btn = ui.button("ボタン3");
+                */
+            });
+        });
+
+        ui.add_space(10.0);
     }
 
     /// 機能選択用コンボボックスのサンプル
@@ -325,7 +416,18 @@ impl TemplateApp {
                     ui.add_space(16.0);
                 }
 
-                egui::widgets::global_theme_preference_buttons(ui);
+                //egui::widgets::global_theme_preference_buttons(ui);
+
+                // メニュー
+                if ui.button("Light Mode").clicked() {
+                    self.visual_mode = VisualMode::Light;
+                }
+                if ui.button("Dark Mode").clicked() {
+                    self.visual_mode = VisualMode::Dark;
+                }
+                if ui.button("System Mode").clicked() {
+                    self.visual_mode = VisualMode::System;
+                }
 
                 self.show_select_func(_ctx, ui);
             });
@@ -546,24 +648,38 @@ impl TemplateApp {
     }
 
     /// フレームのサンプル
-    fn show_frames(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
-        egui::Frame::new().show(ui, |ui| {
-            ui.label("フレームなし");
+    fn show_frames(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        ////////////////////////////////////////////////////////////////////////////
+        ui.add_space(30.0);
+
+        GuiTools::show_titled_frame(ctx, ui, "タイトル111111", |ui| {
+            ui.add_space(5.0);
+            ui.label("グループフレーム     テスト");
+            ui.label("グループフレーム     テスト");
+            ui.label("グループフレーム     テスト");
         });
-        egui::Frame::group(ui.style()).show(ui, |ui| {
-            ui.label("グループフレーム");
-        });
+
+        ////////////////////////////////////////////////////////////////////////////
+
+        ui.add_space(30.0);
         egui::Frame::menu(ui.style()).show(ui, |ui| {
             ui.label("メニューフレーム");
         });
+        ui.add_space(30.0);
         egui::Frame::window(ui.style()).show(ui, |ui| {
             ui.label("ウィンドウフレーム");
         });
+        ui.add_space(30.0);
         egui::Frame::popup(ui.style()).show(ui, |ui| {
             ui.label("ポップアップフレーム");
         });
+        ui.add_space(30.0);
         egui::Frame::central_panel(ui.style()).show(ui, |ui| {
             ui.label("セントラルパネルフレーム");
+        });
+        ui.add_space(30.0);
+        egui::Frame::new().show(ui, |ui| {
+            ui.label("フレームなし");
         });
     }
 
@@ -684,6 +800,26 @@ impl TemplateApp {
     /// グリッドのサンプル
     fn show_grid(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
         egui::Grid::new("setting_grid").show(ui, |ui| {
+            ui.label("1");
+            ui.label("12345");
+            ui.label("1234567890");
+            ui.label("12345");
+            ui.label("abcdef");
+            ui.end_row();
+
+            ui.label("20");
+            ui.label("123");
+            ui.label("123456");
+            ui.label("1234567890");
+            ui.end_row();
+
+            ui.label("30");
+            ui.label("123");
+            ui.label("123456");
+            ui.label("1234567890");
+            ui.label("abcdefghijk");
+            ui.end_row();
+
             ui.label("名前:");
             ui.add_sized(
                 egui::vec2(200.0, 24.0),
