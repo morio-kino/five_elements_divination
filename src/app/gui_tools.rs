@@ -4,14 +4,14 @@ pub struct GuiTools {}
 
 impl GuiTools {
     /// 文字列の表示サイズを取得
-    pub fn get_display_size(ctx: &egui::Context, ui: &mut egui::Ui, text: &str) -> egui::Vec2 {
+    pub fn get_display_size(ctx: &egui::Context, ui: &egui::Ui, text: &str) -> egui::Vec2 {
         // レイアウトを作成してサイズを取得
         let font_id = egui::TextStyle::Body.resolve(&ctx.style());
         //let fill_color = ctx.style().visuals.widgets.noninteractive.bg_fill;
         let fill_color = ctx.style().visuals.widgets.active.bg_fill;
-        let title_dummy =
-            ui.painter()
-                .layout_no_wrap(text.to_string(), font_id.clone(), fill_color);
+        let title_dummy = ui
+            .painter()
+            .layout_no_wrap(text.to_owned(), font_id.clone(), fill_color);
 
         title_dummy.size()
     }
@@ -39,7 +39,7 @@ impl GuiTools {
         // レイアウトを作成してサイズを取得
         let title_dummy =
             ui.painter()
-                .layout_no_wrap(frame_title.to_string(), font_id.clone(), fill_color);
+                .layout_no_wrap(frame_title.to_owned(), font_id.clone(), fill_color);
 
         let title_width = title_dummy.size().x;
         let title_height = title_dummy.size().y;

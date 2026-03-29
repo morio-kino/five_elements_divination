@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>五行易</title>
+        <link rel="stylesheet" href="/index.css" integrity="sha384-pgQCpTXf5Gd2g3bMQt/1fNJvznbtkReq/e3ooBAB1MPzHOTtbFDd5/tqXjQXrP4i"/>
+        
+<script type="module">
+import init, * as bindings from '/five_elements_divination.js';
+const wasm = await init({ module_or_path: '/five_elements_divination_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+    <link rel="modulepreload" href="/five_elements_divination.js" crossorigin="anonymous" integrity="sha384-1SMk9SeTJfG7WqNzz4mvbhqEJmAzWaS1gMUEcEErSXYoo9yCAHcn1nlp2neBgRil"><link rel="preload" href="/five_elements_divination_bg.wasm" crossorigin="anonymous" integrity="sha384-lppzibHD4qX9+eY6gvxbT0TfM05QSvqPn18ZVugGmDsO+t9KyGNLJs44nW1poNNE" as="fetch" type="application/wasm"></head>
+    <body>
+        <!-- The WASM code will resize the canvas dynamically -->
+        <!-- the id is hardcoded in main.rs . so, make sure both match. -->
+        <canvas id="the_canvas_id" width="800" height="600"></canvas>
+    </body>
+</html>
