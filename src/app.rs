@@ -45,6 +45,84 @@ enum FuncNames {
     Texts,             // テキスト表示
 }
 
+// 十干
+#[derive(Clone, Copy, PartialEq, EnumIter, FromPrimitive, Display, Debug)]
+#[repr(u8)]
+enum TenCelestialStems {
+    None,      // (未選択)
+    YangWood,  // 甲,
+    YinWood,   // 乙,
+    YangFire,  // 丙
+    YinFire,   // 丁
+    YangEarth, // 戊
+    YinEarth,  // 己
+    YangMetal, // 庚
+    YinMetal,  // 辛
+    YangWater, // 壬
+    YinWater,  // 癸
+}
+impl TenCelestialStems {
+    fn as_char(&self) -> char {
+        match &self {
+            Self::None => '　',
+            Self::YangWood => '甲',
+            Self::YinWood => '乙',
+            Self::YangFire => '丙',
+            Self::YinFire => '丁',
+            Self::YangEarth => '戊',
+            Self::YinEarth => '己',
+            Self::YangMetal => '庚',
+            Self::YinMetal => '辛',
+            Self::YangWater => '壬',
+            Self::YinWater => '癸',
+        }
+    }
+    fn as_string(&self) -> String {
+        self.as_char().to_string()
+    }
+}
+
+// 十二支
+#[derive(Clone, Copy, PartialEq, EnumIter, FromPrimitive, Display, Debug)]
+#[repr(u8)]
+enum TwelveEarthlyBranches {
+    None,    // (未選択)
+    Rat,     // 子
+    Ox,      // 丑
+    Tiger,   // 寅
+    Rabbit,  // 卯
+    Dragon,  // 辰
+    Snake,   // 巳
+    Horse,   // 午
+    Goat,    // 未
+    Monkey,  // 申
+    Rooster, // 酉
+    Dog,     // 戌
+    Pig,     // 亥
+}
+impl TwelveEarthlyBranches {
+    fn as_char(&self) -> char {
+        match &self {
+            Self::None => '　',
+            Self::Rat => '子',
+            Self::Ox => '丑',
+            Self::Tiger => '寅',
+            Self::Rabbit => '卯',
+            Self::Dragon => '辰',
+            Self::Snake => '巳',
+            Self::Horse => '午',
+            Self::Goat => '未',
+            Self::Monkey => '申',
+            Self::Rooster => '酉',
+            Self::Dog => '戌',
+            Self::Pig => '亥',
+        }
+    }
+    fn as_string(&self) -> String {
+        self.as_char().to_string()
+    }
+}
+
 enum VisualMode {
     Dark,
     Light,
@@ -94,10 +172,21 @@ fn change_canvas_size(_ctx: &egui::Context, x: f32, y: f32) {
 /// アプリのstruct
 //#[derive(Default)]
 pub struct DivinationApp {
+    use_now: bool,
+    detail: bool,
     visual_mode: VisualMode,
     yyyy_mm_dd: String,
     hh_mm_ss: String,
     etoreki: String,
+
+    nen_ten: TenCelestialStems,
+    nen_twelve: TwelveEarthlyBranches,
+    tsuki_ten: TenCelestialStems,
+    tsuki_twelve: TwelveEarthlyBranches,
+    hi_ten: TenCelestialStems,
+    hi_twelve: TwelveEarthlyBranches,
+
+    kubou: (TwelveEarthlyBranches, TwelveEarthlyBranches),
 
     func_selection: usize,
     counter: i32,
@@ -125,10 +214,21 @@ pub struct DivinationApp {
 impl Default for DivinationApp {
     fn default() -> Self {
         Self {
+            use_now: true,
+            detail: true,
             visual_mode: VisualMode::Light,
             yyyy_mm_dd: String::new(),
             hh_mm_ss: String::new(),
             etoreki: String::new(),
+
+            nen_ten: TenCelestialStems::None,
+            nen_twelve: TwelveEarthlyBranches::None,
+            tsuki_ten: TenCelestialStems::None,
+            tsuki_twelve: TwelveEarthlyBranches::None,
+            hi_ten: TenCelestialStems::None,
+            hi_twelve: TwelveEarthlyBranches::None,
+
+            kubou: (TwelveEarthlyBranches::None, TwelveEarthlyBranches::None),
 
             func_selection: 0,
             counter: 0,
@@ -331,55 +431,169 @@ impl DivinationApp {
         ui.add_space(10.0);
 
         GuiTools::show_titled_frame(ctx, ui, "卦", |ui| {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.label(" ");
-                    let res = ui.checkbox(&mut self.checked, "現在 → ");
-                    if (res).changed() {
-                        println!("チェックボックスの状態が変わりました: {}", self.checked);
-                    }
-                    ui.label("占った日");
+            ui.vertical(|ui| {
+                // 現在の時間表示部分
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(" ");
+                        let res = ui.checkbox(&mut self.use_now, "現在 → ");
+                        if (res).changed() {
+                            println!("チェックボックスの状態が変わりました: {}", self.use_now);
+                        }
+                        ui.label("占った日");
+                    });
+                    ui.vertical(|ui| {
+                        let mut width = 0.0;
+                        ui.horizontal(|ui| {
+                            ui.vertical(|ui| {
+                                let label_text = "(yyyy/mm/dd)";
+                                let size = GuiTools::get_display_size(ctx, ui, label_text);
+                                //yyyy_mm_dd_size = GuiTools::get_display_size(ctx, ui, label_text);
+                                ui.label(label_text);
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut self.yyyy_mm_dd)
+                                        .desired_width(size.x),
+                                );
+                                width += size.x;
+                            });
+                            ui.vertical(|ui| {
+                                let label_text = "(hh:mm:ss)";
+                                let size = GuiTools::get_display_size(ctx, ui, label_text);
+                                ui.label(label_text);
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut self.hh_mm_ss)
+                                        .desired_width(size.x),
+                                );
+                                width += size.x;
+                            });
+                            ui.vertical(|ui| {
+                                let label_text = "干支歴";
+                                let size =
+                                    GuiTools::get_display_size(ctx, ui, "甲子年甲子月甲子日");
+                                ui.add_sized([size.x, size.y], egui::Label::new(label_text)); // 幅を指定して中央に表示
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut self.etoreki)
+                                        .desired_width(size.x),
+                                );
+                                width += size.x;
+                            });
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_space(width / 3.0);
+                            if ui.button("↓").clicked() {
+                                println!("↓ボタンが押されました。");
+                            }
+                            ui.add_space(width / 3.0);
+                            ui.label("↓");
+                        });
+                    });
+                    ui.vertical(|ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("計算").clicked() {
+                                println!("計算ボタンが押されました。");
+                            }
+                            if ui.button("クリア").clicked() {
+                                println!("クリアボタンが押されました。");
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            if ui.button("コピー").clicked() {
+                                println!("コピーボタンが押されました。");
+                            }
+                            let res = ui.checkbox(&mut self.detail, "詳細");
+                            if (res).changed() {
+                                println!(
+                                    "詳細チェックボックスの状態が変わりました: {}",
+                                    self.detail
+                                );
+                            }
+                        });
+                    });
+                    /*
+                    ui.vertical(|ui| {
+                        ui.label("(hh:mm:ss)");
+                        ui.text_edit_singleline(&mut self.input_text_single);
+                        ui.label("　");
+                    });
+                    ui.vertical(|ui| {
+                        ui.label("干支歴");
+                        ui.text_edit_singleline(&mut self.input_text_single);
+                        ui.label("　");
+                    });
+                    let _btn = ui.button("ボタン1");
+                    let _btn = ui.button("ボタン2");
+                    let _btn = ui.button("ボタン3");
+                    */
                 });
-                ui.vertical(|ui| {
-                    let label_text = "(yyyy/mm/dd)";
-                    ui.label(label_text);
-                    let size = GuiTools::get_display_size(ctx, ui, label_text);
-                    ui.add(egui::TextEdit::singleline(&mut self.yyyy_mm_dd).desired_width(size.x));
-                    ui.label("　");
+
+                // 十干十二支での日付表示部分
+                ui.horizontal(|ui| {
+                    let size = GuiTools::get_display_size(ctx, ui, "甲");
+
+                    egui::ComboBox::from_id_salt("NEN_TEN")
+                        .selected_text(self.nen_ten.as_string())
+                        .width(size.x * 3.5)
+                        .show_ui(ui, |ui| {
+                            for item in TenCelestialStems::iter() {
+                                ui.selectable_value(&mut self.nen_ten, item, item.as_string());
+                            }
+                        });
+                    egui::ComboBox::from_id_salt("NEN_TWELVE")
+                        .selected_text(self.nen_twelve.as_string())
+                        .width(size.x * 3.5)
+                        .show_ui(ui, |ui| {
+                            for item in TwelveEarthlyBranches::iter() {
+                                ui.selectable_value(&mut self.nen_twelve, item, item.as_string());
+                            }
+                        });
+                    ui.label("年");
+
+                    egui::ComboBox::from_id_salt("TSUKI_TEN")
+                        .selected_text(self.tsuki_ten.as_string())
+                        .width(size.x * 3.5)
+                        .show_ui(ui, |ui| {
+                            for item in TenCelestialStems::iter() {
+                                ui.selectable_value(&mut self.tsuki_ten, item, item.as_string());
+                            }
+                        });
+                    egui::ComboBox::from_id_salt("TSUKI_TWELVE")
+                        .selected_text(self.tsuki_twelve.as_string())
+                        .width(size.x * 3.5)
+                        .show_ui(ui, |ui| {
+                            for item in TwelveEarthlyBranches::iter() {
+                                ui.selectable_value(&mut self.tsuki_twelve, item, item.as_string());
+                            }
+                        });
+                    ui.label("月");
+
+                    egui::ComboBox::from_id_salt("HI_TEN")
+                        .selected_text(self.hi_ten.as_string())
+                        .width(size.x * 3.5)
+                        .show_ui(ui, |ui| {
+                            for item in TenCelestialStems::iter() {
+                                ui.selectable_value(&mut self.hi_ten, item, item.as_string());
+                            }
+                        });
+                    egui::ComboBox::from_id_salt("HI_TWELVE")
+                        .selected_text(self.hi_twelve.as_string())
+                        .width(size.x * 3.5)
+                        .show_ui(ui, |ui| {
+                            for item in TwelveEarthlyBranches::iter() {
+                                ui.selectable_value(&mut self.hi_twelve, item, item.as_string());
+                            }
+                        });
+                    ui.label("日");
+
+                    ui.add_space(size.x);
+                    ui.label("空亡 - ");
+                    ui.label(format!(
+                        "{}, {}",
+                        self.kubou.0.as_string(),
+                        self.kubou.1.as_string()
+                    ));
                 });
-                ui.vertical(|ui| {
-                    let label_text = "(hh:mm:ss)";
-                    ui.label(label_text);
-                    let size = GuiTools::get_display_size(ctx, ui, label_text);
-                    ui.add(egui::TextEdit::singleline(&mut self.hh_mm_ss).desired_width(size.x));
-                    ui.label("　");
-                });
-                ui.vertical(|ui| {
-                    let label_text = "干支歴";
-                    ui.label(label_text);
-                    let size = GuiTools::get_display_size(ctx, ui, "甲子年甲子月甲子日");
-                    ui.add(egui::TextEdit::singleline(&mut self.etoreki).desired_width(size.x));
-                    ui.label("　");
-                });
-                /*
-                ui.vertical(|ui| {
-                    ui.label("(hh:mm:ss)");
-                    ui.text_edit_singleline(&mut self.input_text_single);
-                    ui.label("　");
-                });
-                ui.vertical(|ui| {
-                    ui.label("干支歴");
-                    ui.text_edit_singleline(&mut self.input_text_single);
-                    ui.label("　");
-                });
-                let _btn = ui.button("ボタン1");
-                let _btn = ui.button("ボタン2");
-                let _btn = ui.button("ボタン3");
-                */
             });
         });
-
-        ui.add_space(10.0);
     }
 
     /// 機能選択用コンボボックスのサンプル
