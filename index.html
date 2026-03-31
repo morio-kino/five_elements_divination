@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>五行易</title>
+        <link rel="stylesheet" href="https://morio-kino.github.io/five_elements_divination/index.css" integrity="sha384-7GZOiJ7WwbJ2PKz3iZ2Vt/NHNz65guUjQZ/uo6o2LYkbO/Al8pImelhUBJCReJw+"/>
+        
+<script type="module">
+import init, * as bindings from 'https://morio-kino.github.io/five_elements_divination/five_elements_divination.js';
+const wasm = await init({ module_or_path: 'https://morio-kino.github.io/five_elements_divination/five_elements_divination_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+    <link rel="modulepreload" href="https://morio-kino.github.io/five_elements_divination/five_elements_divination.js" crossorigin="anonymous" integrity="sha384-Asc61tIUZq/1TL/KKqvuqmubKpQkB3KToeiDcocCD6pdRIjCofyHnbGibjvQrsE9"><link rel="preload" href="https://morio-kino.github.io/five_elements_divination/five_elements_divination_bg.wasm" crossorigin="anonymous" integrity="sha384-8dfLqc4TKQN1Ys4alOSWhQbphCS+Cv7wqGAEfFbAdE8z6aVz5gZKtw+7gyGNs9n4" as="fetch" type="application/wasm"></head>
+    <body>
+        <!-- The WASM code will resize the canvas dynamically -->
+        <!-- the id is hardcoded in main.rs . so, make sure both match. -->
+        <canvas id="the_canvas_id" width="800" height="600"></canvas>
+    </body>
+</html>
