@@ -4,14 +4,19 @@ use egui::Color32;
 use egui::DragValue;
 use egui::RichText;
 use egui::{FontData, FontDefinitions, FontFamily};
+use egui_dialogs::Dialogs;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::sync::Arc;
+use std::time::Duration;
 use strum::IntoEnumIterator as _;
 use strum_macros::{Display, EnumIter};
 
 mod gui_tools;
 use gui_tools::GuiTools;
+
+mod text_tools;
+use text_tools::TextTools;
 
 // 機能名の一覧
 #[derive(Debug, EnumIter, FromPrimitive, Display)]
@@ -171,7 +176,9 @@ fn change_canvas_size(_ctx: &egui::Context, x: f32, y: f32) {
 /////////////////////////////////////
 /// アプリのstruct
 //#[derive(Default)]
-pub struct DivinationApp {
+pub struct DivinationApp<'a> {
+    dialogs: Dialogs<'a>,
+
     use_now: bool,
     detail: bool,
     visual_mode: VisualMode,
@@ -211,9 +218,11 @@ pub struct DivinationApp {
 }
 
 // アプリの初期値
-impl Default for DivinationApp {
+impl Default for DivinationApp<'_> {
     fn default() -> Self {
         Self {
+            dialogs: Dialogs::default(),
+
             use_now: true,
             detail: true,
             visual_mode: VisualMode::Light,
@@ -255,9 +264,15 @@ impl Default for DivinationApp {
 }
 
 // アプリの表示のコントロール
-impl eframe::App for DivinationApp {
+impl eframe::App for DivinationApp<'_> {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // 現在の時刻を使用する場合
+        if self.use_now {
+            // 0.2秒後に再描画をリクエスト
+            ctx.request_repaint_after(Duration::from_millis(200));
+        }
+
         // 表示モードの設定
         match self.visual_mode {
             VisualMode::Dark => {
@@ -323,6 +338,9 @@ impl eframe::App for DivinationApp {
                 }
             }
         });
+
+        // ダイアログ表示のための処理
+        self.dialogs.show(ctx);
     }
 }
 
@@ -408,7 +426,7 @@ fn setup_fonts(ctx: &egui::Context) {
 
 //////////////////////
 // アプリの実装
-impl DivinationApp {
+impl DivinationApp<'_> {
     /// アプリのコンストラクター
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -434,10 +452,26 @@ impl DivinationApp {
             ui.vertical(|ui| {
                 // 現在の時間表示部分
                 ui.horizontal(|ui| {
+                    if self.use_now {
+                        // 現在の日時情報を更新
+                        let now: DateTime<Local> = Local::now();
+                        self.yyyy_mm_dd =
+                            format!(" {:0>4}/{:0>2}/{:0>2}", now.year(), now.month(), now.day());
+                        self.hh_mm_ss = format!(
+                            " {:0>2}:{:0>2}:{:0>2}",
+                            now.hour(),
+                            now.minute(),
+                            now.second()
+                        );
+                    }
                     ui.vertical(|ui| {
                         ui.label(" ");
                         let res = ui.checkbox(&mut self.use_now, "現在 → ");
                         if (res).changed() {
+                            if self.use_now {
+                                // 再描画をリクエスト
+                                ctx.request_repaint();
+                            }
                             println!("チェックボックスの状態が変わりました: {}", self.use_now);
                         }
                         ui.label("占った日");
@@ -448,7 +482,7 @@ impl DivinationApp {
                             ui.vertical(|ui| {
                                 let label_text = "(yyyy/mm/dd)";
                                 let size = GuiTools::get_display_size(ctx, ui, label_text);
-                                //yyyy_mm_dd_size = GuiTools::get_display_size(ctx, ui, label_text);
+                                //ui.label(egui::RichText::new(label_text).monospace());
                                 ui.label(label_text);
                                 ui.add(
                                     egui::TextEdit::singleline(&mut self.yyyy_mm_dd)
@@ -481,7 +515,40 @@ impl DivinationApp {
                         ui.horizontal(|ui| {
                             ui.add_space(width / 3.0);
                             if ui.button("↓").clicked() {
-                                println!("↓ボタンが押されました。");
+                                match TextTools::parse_date(&self.yyyy_mm_dd) {
+                                    Some((yyyy, mm, dd)) => {
+                                        self.dialogs.info(
+                                            "テスト",
+                                            format!("{yyyy}/{mm}/{dd}が指定されました。"),
+                                        );
+                                    }
+                                    None => {
+                                        self.dialogs.error(
+                                            "エラー",
+                                            format!(
+                                                "日付の指定(yyyy/mm/dd)が正しくありません。\n[{}]",
+                                                self.yyyy_mm_dd
+                                            ),
+                                        );
+                                    }
+                                }
+                                match TextTools::parse_time(&self.hh_mm_ss) {
+                                    Some((hh, mm, ss)) => {
+                                        self.dialogs.info(
+                                            "テスト",
+                                            format!("{hh}:{mm}:{ss}が指定されました。"),
+                                        );
+                                    }
+                                    None => {
+                                        self.dialogs.error(
+                                            "エラー",
+                                            format!(
+                                                "時刻の指定(hh:mm:ss)が正しくありません。\n[{}]",
+                                                self.hh_mm_ss
+                                            ),
+                                        );
+                                    }
+                                }
                             }
                             ui.add_space(width / 3.0);
                             ui.label("↓");
